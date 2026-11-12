@@ -59,13 +59,16 @@ function chooseLead(tracks){
 }
 function isolateMelody(source,all){
  const gs=groups(source),poly=gs.filter(g=>g.notes.length>1).length/Math.max(1,gs.length);
- if(poly<.06)return {lead:source.slice(0,650),rest:[]};
+ // Rolled/arpeggiated chords may begin a few milliseconds apart but still overlap.
+ const ordered=[...source].sort((a,b)=>a.beat-b.beat);let overlaps=0,maxEnd=-1;
+ for(const n of ordered){if(n.beat<maxEnd-.08)overlaps++;maxEnd=Math.max(maxEnd,n.beat+n.length)}
+ if(poly<.06&&overlaps/Math.max(1,ordered.length)<.12)return {lead:source.slice(0,650),rest:[]};
  const maxes=gs.map(g=>Math.max(...g.notes.map(n=>n.midi)));
  const register=Math.min(70,Math.max(56,pct(maxes,.68)-7));
  const picked=[];let previous=null;
  for(const g of gs){
   const high=Math.max(...g.notes.map(n=>n.midi));
-  if(g.notes.length>1&&high<register&&previous!==null&&high<previous.midi-8)continue;
+  if(g.notes.length>1&&high<register&&previous!==null&&high<=previous.midi-6)continue;
   const sorted=[...g.notes].sort((a,b)=>b.midi-a.midi);
   const pool=sorted.filter(n=>n.midi>=register-6).slice(0,3);
   const candidates=pool.length?pool:[sorted[0]];
